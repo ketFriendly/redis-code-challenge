@@ -15,11 +15,12 @@
     "tape": "^4.6.3"
   },
   "dependencies": {
+    "bluebird": "^3.7.2",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "joi": "^17.4.2",
     "nodemon": "^2.0.12",
-    "redis": "2.7.1",
+    "redis": "2.8.0",
     "rk": "^1.0.0"
   },
   "directories": {

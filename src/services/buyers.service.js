@@ -18,6 +18,58 @@ const postBuyer = async (buyer) => {
   saveBuyer(buyer);
 };
 
+const getBuyerById = async (id) => {
+  const buyerExists = await client.sismemberAsync("all-buyers", id);
+  if (!buyerExists) {
+    return `There are no buyers with the id ${id}`; 
+  }
+  const buyerKey = rk("buyer", id);
+  const offersKey = rk(buyerKey, "offers");
+  let numberOfOffers = 0;
+  let counter = 0;
+
+  const offersCountString = await client.hmgetAsync(
+    "all-offers-length",
+    offersKey
+  );
+  const offersCount = parseInt(offersCountString[0]);
+  //debug
+  const offersArray = [];
+  while (counter < offersCount) {
+    let offerKey = rk(buyerKey, "offers", counter);
+    const offer = await client.hmgetAsync(
+      offerKey,
+      "value",
+      "location",
+      "criteria"
+    );
+
+    const tempDevice = await client.smembersAsync(rk(offer[2], "device"));
+    const tempHour = await client.smembersAsync(rk(offer[2], "hour"));
+    const tempDay = await client.smembersAsync(rk(offer[2], "day"));
+    const tempState = await client.smembersAsync(rk(offer[2], "state"));
+    const tempOffer = {
+      value: offer[0],
+      location: offer[1],
+      criteria: {
+        device: tempDevice,
+        hour: tempHour.map((x) => parseInt(x)),
+        day: tempDay.map((x) => parseInt(x)),
+        state: tempState,
+      },
+    };
+    offersArray.push(tempOffer);
+    counter++;
+  }
+  const buyer = {
+    id: id,
+    offers: offersArray,
+  };
+  const validationResult = await validateBuyer(buyer);
+  
+  return buyer;
+};
+
 const saveBuyer = (buyer) => {
   //save buyer
   // buyer:id
@@ -27,7 +79,16 @@ const saveBuyer = (buyer) => {
 
   //offers
   //buyer:id:offers
-  client.hmset("all-offers-length", rk(buyerKey, "offers"), numberOfOffers); //all-offers-length buyer:id:offers length
+
+  //client.sadd(rk(buyerKey, "offers"), numberOfOffers);
+  client.hmset(
+    "all-offers-length",
+    "id",
+    rk(buyerKey, "offers"),
+    "numberOfOffers",
+    numberOfOffers
+  ); //all-offers-length buyer:id:offers length
+
   saveBuyersOffers(buyer.offers, buyerKey);
 };
 
@@ -69,4 +130,5 @@ const saveBuyersOffersCriteria = (criteria, offerKey) => {
 
 module.exports = {
   postBuyer,
+  getBuyerById,
 };
