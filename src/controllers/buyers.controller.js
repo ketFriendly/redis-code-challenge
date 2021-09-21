@@ -17,9 +17,16 @@ const getBuyer = async (req,res) => {
     }
 }
 
+const routeTraffic = async (req,res) => {
+    try {
+        const dt = new Date(req.query.timestamp);
+        return res.json(await buyersService.getOffer(dt.getHours(), dt.getDay(), req.query.device))
+    } catch (error) {
+        console.log(error)
+    }
+}
 module.exports = {
     addBuyer,
-    getBuyer
+    getBuyer,
+    routeTraffic
 }
-/* 
-routeTraffic */

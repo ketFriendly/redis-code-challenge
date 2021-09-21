@@ -6,13 +6,10 @@ const { validateBuyer } = require("../models/buyer.model");
 const client = createClient(process.env.REDIS_PORT, process.env.HOST, {
   fast: true,
 });
-//let client = client.multi();
 
 const postBuyer = async (buyer) => {
-  console.log(buyer.id);
   const validationResult = await validateBuyer(buyer);
   if (validationResult.error) {
-    console.log(validationResult.error);
     return validationResult.error;
   }
   saveBuyer(buyer);
@@ -21,7 +18,7 @@ const postBuyer = async (buyer) => {
 const getBuyerById = async (id) => {
   const buyerExists = await client.sismemberAsync("all-buyers", id);
   if (!buyerExists) {
-    return `There are no buyers with the id ${id}`; 
+    return `There are no buyers with the id ${id}`;
   }
   const buyerKey = rk("buyer", id);
   const offersKey = rk(buyerKey, "offers");
@@ -66,10 +63,30 @@ const getBuyerById = async (id) => {
     offers: offersArray,
   };
   const validationResult = await validateBuyer(buyer);
-  
+
   return buyer;
 };
 
+const getOffer = async (hour, day, device) => {
+  //add validation
+  const offerKeys = await client.sinterAsync([
+    rk("h", hour),
+    rk("d", day),
+    device,
+  ]);
+  if (offerKeys.length === 0) {
+    return "There are no offers for those parameters";
+  }
+  let result = await Promise.all(
+    offerKeys.map(async (key) => {
+      return await client.hmgetAsync(key, "location", "value");
+    })
+  );
+  var sortedArray = result.sort(function (a, b) {
+    return b[1] - a[1];
+  });
+  return sortedArray[0][0];
+};
 const saveBuyer = (buyer) => {
   //save buyer
   // buyer:id
@@ -79,8 +96,6 @@ const saveBuyer = (buyer) => {
 
   //offers
   //buyer:id:offers
-
-  //client.sadd(rk(buyerKey, "offers"), numberOfOffers);
   client.hmset(
     "all-offers-length",
     "id",
@@ -119,8 +134,6 @@ const saveBuyersOffersCriteria = (criteria, offerKey) => {
   client.sadd(rk(criteriaKey, "day"), criteria.day);
   client.sadd(rk(criteriaKey, "state"), criteria.state);
 
-  //criteria.device.forEach(device => device === "mobile"? client.sadd("all-mobile-devices", rk(criteriaKey,"device")) : client.sadd("all-desktop-devices", rk(criteriaKey,"device")));
-
   //for querying location based on device, hour, day and state
   criteria.device.forEach((device) => client.sadd(device, offerKey));
   criteria.hour.forEach((h) => client.sadd(rk("h", h), offerKey)); //set in format 0 = buyer:id:offers:index
@@ -131,4 +144,5 @@ const saveBuyersOffersCriteria = (criteria, offerKey) => {
 module.exports = {
   postBuyer,
   getBuyerById,
+  getOffer,
 };
