@@ -1,11 +1,11 @@
-const buyersService = require("../services/buyers.service");
+const buyersService = require('../services/buyers.service');
 
 const addBuyer = async (req, res) => {
   try {
     return res.status(200).json(await buyersService.postBuyer(req.body));
   } catch (error) {
-    res.status(error.code).json(error.message);
     console.log(error);
+    return res.status(error.code).json(error.message);
   }
 };
 
@@ -15,8 +15,8 @@ const getBuyer = async (req, res) => {
       .status(200)
       .json(await buyersService.getBuyerById(req.params.id));
   } catch (error) {
-    res.status(error.code).json(error.message);
     console.log(error);
+    return res.status(error.code).json(error.message);
   }
 };
 
@@ -32,10 +32,11 @@ const routeTraffic = async (req, res) => {
     res.writeHead(302, { Location: redirectUrl });
     res.end();
   } catch (error) {
-    res.status(error.code).json(error.message);
     console.log(error);
+    return res.status(error.code).json(error.message);
   }
 };
+
 module.exports = {
   addBuyer,
   getBuyer,
