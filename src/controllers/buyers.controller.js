@@ -1,32 +1,43 @@
-
-const buyersService = require('../services/buyers.service');
+const buyersService = require("../services/buyers.service");
 
 const addBuyer = async (req, res) => {
-    try {
-        return res.json(await buyersService.postBuyer(req.body))      
-    } catch (error) {
-        console.log(error)
-    }
-}
+  try {
+    return res.status(200).json(await buyersService.postBuyer(req.body));
+  } catch (error) {
+    res.status(error.code).json(error.message);
+    console.log(error);
+  }
+};
 
-const getBuyer = async (req,res) => {
-    try {
-        return res.json(await buyersService.getBuyerById(req.params.id))
-    } catch (error) {
-        console.log(error)
-    }
-}
+const getBuyer = async (req, res) => {
+  try {
+    return res
+      .status(200)
+      .json(await buyersService.getBuyerById(req.params.id));
+  } catch (error) {
+    res.status(error.code).json(error.message);
+    console.log(error);
+  }
+};
 
-const routeTraffic = async (req,res) => {
-    try {
-        const dt = new Date(req.query.timestamp);
-        return res.json(await buyersService.getOffer(dt.getHours(), dt.getDay(), req.query.device))
-    } catch (error) {
-        console.log(error)
-    }
-}
+const routeTraffic = async (req, res) => {
+  try {
+    const dt = new Date(req.query.timestamp);
+    const redirectUrl = await buyersService.getOffer(
+      dt.getHours(),
+      dt.getDay(),
+      req.query.device,
+      req.query.state
+    );
+    res.writeHead(302, { Location: redirectUrl });
+    res.end();
+  } catch (error) {
+    res.status(error.code).json(error.message);
+    console.log(error);
+  }
+};
 module.exports = {
-    addBuyer,
-    getBuyer,
-    routeTraffic
-}
+  addBuyer,
+  getBuyer,
+  routeTraffic,
+};

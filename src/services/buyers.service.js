@@ -1,7 +1,12 @@
 require("dotenv").config();
 const rk = require("rk");
 const createClient = require("../redis");
-const { validateBuyer } = require("../models/buyer.model");
+const { validateBuyer, validateCriteria } = require("../models/buyer.model");
+const {
+  NotFoundException,
+  UnprocessableEntityException,
+  InternalServerException,
+} = require("../utils/exception_filters/http_exceptions");
 
 const client = createClient(process.env.REDIS_PORT, process.env.HOST, {
   fast: true,
@@ -10,7 +15,7 @@ const client = createClient(process.env.REDIS_PORT, process.env.HOST, {
 const postBuyer = async (buyer) => {
   const validationResult = await validateBuyer(buyer);
   if (validationResult.error) {
-    return validationResult.error;
+    throw new UnprocessableEntityException(validationResult.error);
   }
   saveBuyer(buyer);
 };
@@ -18,11 +23,10 @@ const postBuyer = async (buyer) => {
 const getBuyerById = async (id) => {
   const buyerExists = await client.sismemberAsync("all-buyers", id);
   if (!buyerExists) {
-    return `There are no buyers with the id ${id}`;
+    throw new NotFoundException(`There are no buyers with the id ${id}`);
   }
   const buyerKey = rk("buyer", id);
   const offersKey = rk(buyerKey, "offers");
-  let numberOfOffers = 0;
   let counter = 0;
 
   const offersCountString = await client.hmgetAsync(
@@ -63,19 +67,25 @@ const getBuyerById = async (id) => {
     offers: offersArray,
   };
   const validationResult = await validateBuyer(buyer);
-
+  if (validationResult.error) {
+    throw new InternalServerException(validationResult.error);
+  }
   return buyer;
 };
 
-const getOffer = async (hour, day, device) => {
-  //add validation
+const getOffer = async (hour, day, device, state) => {
+  const validationResult = await validateCriteria({ device:[device] , hour:[hour], day:[day], state:[state] });
+  if (validationResult.error) {
+    throw new UnprocessableEntityException(validationResult.error);
+  }
   const offerKeys = await client.sinterAsync([
     rk("h", hour),
     rk("d", day),
     device,
+    state,
   ]);
   if (offerKeys.length === 0) {
-    return "There are no offers for those parameters";
+    throw new NotFoundException("There are no offers for those parameters");
   }
   let result = await Promise.all(
     offerKeys.map(async (key) => {
@@ -87,6 +97,7 @@ const getOffer = async (hour, day, device) => {
   });
   return sortedArray[0][0];
 };
+
 const saveBuyer = (buyer) => {
   //save buyer
   // buyer:id
