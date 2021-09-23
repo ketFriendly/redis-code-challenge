@@ -1,5 +1,5 @@
-const joi = require('joi');
-const { CriteriaSchema } = require('./criteria.model');
+const joi = require('joi')
+const { CriteriaSchema } = require('./criteria.model')
 
 const OfferSchema = joi.object({
   criteria: CriteriaSchema,
@@ -8,9 +8,9 @@ const OfferSchema = joi.object({
     .string()
     .min(1)
     .uri({ scheme: ['http', 'https'] })
-    .required(),
-});
+    .required()
+})
 
 module.exports = {
-    OfferSchema
+  OfferSchema
 }
