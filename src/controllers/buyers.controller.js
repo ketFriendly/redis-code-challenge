@@ -23,8 +23,12 @@ const getBuyer = async (req, res) => {
 const routeTraffic = async (req, res) => {
   try {
     const dt = new Date(req.query.timestamp)
+    const minutes = dt.getMinutes()
+    let hours = dt.getHours()
+    if (minutes >= 30 && hours !== 0) hours = hours - 1
+    if (minutes >= 30 && hours === 0) hours = 23
     const redirectUrl = await buyersService.getOffer(
-      dt.getHours(),
+      hours,
       dt.getDay(),
       req.query.device,
       req.query.state
